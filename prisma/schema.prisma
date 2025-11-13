@@ -48,7 +48,7 @@ model User {
     email               String?              @unique
     emailVerified       DateTime?
     image               String?
-    currency            String               @default("USD")
+    currency            String               @default("INR")
     preferredLanguage   String               @default("")
     accounts            Account[]
     sessions            Session[]
@@ -93,7 +93,7 @@ model Group {
     publicId         String         @unique
     name             String
     userId           Int
-    defaultCurrency  String         @default("USD")
+    defaultCurrency  String         @default("INR")
     createdAt        DateTime       @default(now())
     updatedAt        DateTime       @updatedAt
     archivedAt       DateTime?

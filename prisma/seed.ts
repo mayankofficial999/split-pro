@@ -23,7 +23,7 @@ async function createGroups() {
       data: {
         name: 'Holiday Trip',
         publicId: 'holiday-trip-123',
-        defaultCurrency: 'USD',
+        defaultCurrency: 'INR',
         createdBy: { connect: { id: users[0]?.id } },
       },
     });

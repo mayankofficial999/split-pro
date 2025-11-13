@@ -16,7 +16,7 @@ export const groupRouter = createTRPCRouter({
           name: input.name,
           publicId: nanoid(),
           userId: ctx.session.user.id,
-          defaultCurrency: input.currency ?? 'USD',
+          defaultCurrency: input.currency ?? 'INR',
           groupUsers: {
             create: {
               userId: ctx.session.user.id,

@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 /** @type {import('next-i18next').UserConfig} */
 const config = {
   i18n: {
@@ -5,7 +7,7 @@ const config = {
     locales: ['default', 'en', 'de', 'it', 'pl', 'pt', 'sv', 'es-MX', 'es-AR'],
     localeDetection: false,
   },
-  localePath: './public/locales',
+  localePath: path.resolve('./public/locales'),
   fallbackLng: 'en',
   reloadOnPrerender: process.env.NODE_ENV === 'development',
 };
