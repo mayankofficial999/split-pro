@@ -6,6 +6,8 @@ const config = {
     localeDetection: false,
   },
   localePath: './public/locales',
+  fallbackLng: 'en',
+  reloadOnPrerender: process.env.NODE_ENV === 'development',
 };
 
 export default config;
