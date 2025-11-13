@@ -215,7 +215,6 @@ model ExpenseRecurrence {
   jobId    BigInt    @unique
   notified Boolean   @default(true)
   expense  Expense[]
-  job      job       @relation(fields: [jobId], references: [jobid], onDelete: Cascade)
 
   @@schema("public")
 }
@@ -240,17 +239,16 @@ model PushNotification {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model job {
-  jobid      BigInt             @id @default(autoincrement())
+  jobid      BigInt            @id @default(autoincrement())
   schedule   String
   command    String
-  nodename   String             @default("localhost")
-  nodeport   Int                @default(dbgenerated("inet_server_port()"))
-  database   String             @default(dbgenerated("current_database()"))
-  username   String             @default(dbgenerated("CURRENT_USER"))
-  active     Boolean            @default(true)
+  nodename   String            @default("localhost")
+  nodeport   Int               @default(dbgenerated("inet_server_port()"))
+  database   String            @default(dbgenerated("current_database()"))
+  username   String            @default(dbgenerated("CURRENT_USER"))
+  active     Boolean           @default(true)
   jobname    String?
-  recurrence ExpenseRecurrence? @relation()
-  runDetails job_run_details[]  @relation("job_run_details")
+  runDetails job_run_details[] @relation("job_run_details")
 
   @@unique([jobname, username], map: "jobname_username_uniq")
   @@schema("cron")

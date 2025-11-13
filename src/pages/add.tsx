@@ -120,8 +120,8 @@ const AddPage: NextPageWithUser<{
     );
     useAddExpenseStore.setState({ showFriends: false });
     setExpenseDate(expenseQuery.data.expenseDate);
-    if (expenseQuery.data.recurrence) {
-      setCronExpression(cronFromBackend(expenseQuery.data.recurrence.job.schedule));
+    if (expenseQuery.data.recurrence && (expenseQuery.data.recurrence as any).job) {
+      setCronExpression(cronFromBackend((expenseQuery.data.recurrence as any).job.schedule));
     }
     if (expenseQuery.data.fileKey) {
       setFileKey(expenseQuery.data.fileKey);

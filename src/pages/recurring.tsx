@@ -60,7 +60,7 @@ const RecurringPage: NextPageWithUser = () => {
                 </p>
                 <p className="text-primary text-sm">
                   {t('recurrence.recurring')}
-                  {i18nReady
+                  {i18nReady && e.job
                     ? `: 
                 
                 ${cronParser(cronFromBackend(e.job.schedule))}`

@@ -71,6 +71,3 @@ ELSE
     );
 END IF;
 END $$;
-
--- AddForeignKey
-ALTER TABLE "public"."ExpenseRecurrence" ADD CONSTRAINT "ExpenseRecurrence_jobId_fkey" FOREIGN KEY ("jobId") REFERENCES "cron"."job"("jobid") ON DELETE CASCADE ON UPDATE CASCADE;

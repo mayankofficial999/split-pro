@@ -100,25 +100,50 @@ export const expenseRouter = createTRPCRouter({
           const [{ schedule }] = await createRecurringExpenseJob(expense.id, input.cronExpression);
           console.log('Created recurring expense job with jobid:', schedule);
 
-          await db.expense.update({
+          // Manually create/update ExpenseRecurrence since we removed the Prisma relation
+          // First, get the current expense to check if it has a recurrenceId
+          const currentExpense = await db.expense.findUnique({
             where: { id: expense.id },
-            data: {
-              recurrence: {
-                upsert: {
-                  create: {
-                    job: {
-                      connect: { jobid: schedule },
-                    },
-                  },
-                  update: {
-                    job: {
-                      connect: { jobid: schedule },
-                    },
-                  },
-                },
-              },
-            },
+            select: { recurrenceId: true },
           });
+
+          if (currentExpense && 'recurrenceId' in currentExpense && currentExpense.recurrenceId) {
+            // Update existing recurrence with new jobId
+            const existingRecurrence = await db.expenseRecurrence.findUnique({
+              where: { id: currentExpense.recurrenceId },
+            });
+
+            if (existingRecurrence) {
+              // If there's an old job, unschedule it first
+              const oldJob = await db.job.findUnique({
+                where: { jobid: existingRecurrence.jobId },
+              });
+              if (oldJob?.jobname) {
+                await db.$executeRaw`SELECT cron.unschedule(${oldJob.jobname})`;
+              }
+
+              // Update existing recurrence with new jobId
+              await db.expenseRecurrence.update({
+                where: { id: existingRecurrence.id },
+                data: { jobId: schedule },
+              });
+            }
+          } else {
+            // Create new recurrence
+            const newRecurrence = await db.expenseRecurrence.create({
+              data: {
+                jobId: schedule,
+              },
+            });
+
+            // Update expense to reference the recurrence
+            await db.expense.update({
+              where: { id: expense.id },
+              data: {
+                recurrenceId: newRecurrence.id,
+              },
+            });
+          }
         }
 
         return expense;
@@ -340,15 +365,7 @@ export const expenseRouter = createTRPCRouter({
           deletedByUser: true,
           updatedByUser: true,
           group: true,
-          recurrence: {
-            include: {
-              job: {
-                select: {
-                  schedule: true,
-                },
-              },
-            },
-          },
+          recurrence: true,
           conversionTo: {
             include: {
               expenseParticipants: {
@@ -389,8 +406,23 @@ export const expenseRouter = createTRPCRouter({
         });
       }
 
-      if (expense?.recurrence?.job.schedule) {
-        expense.recurrence.job.schedule = expense.recurrence.job.schedule.replaceAll('$', 'L');
+      // Manually fetch job data if recurrence exists
+      if (expense && 'recurrence' in expense && expense.recurrence) {
+        const job = await db.job.findUnique({
+          where: {
+            jobid: (expense.recurrence as { jobId: bigint }).jobId,
+          },
+          select: {
+            schedule: true,
+          },
+        });
+        if (job) {
+          // Type assertion needed since we removed the Prisma relation
+          (expense.recurrence as any).job = job;
+          if (job.schedule) {
+            job.schedule = job.schedule.replaceAll('$', 'L');
+          }
+        }
       }
 
       return expense;
@@ -436,7 +468,6 @@ export const expenseRouter = createTRPCRouter({
   getRecurringExpenses: protectedProcedure.query(async ({ ctx }) => {
     const recurrences = await db.expenseRecurrence.findMany({
       include: {
-        job: true,
         expense: {
           take: 1,
           orderBy: { createdAt: 'desc' },
@@ -463,9 +494,21 @@ export const expenseRouter = createTRPCRouter({
       },
     });
 
-    return recurrences
-      .filter((r) => r.expense.length > 0)
-      .map((r) => ({ ...r, expense: r.expense[0]! }));
+    // Manually fetch job data for each recurrence
+    const recurrencesWithJobs = await Promise.all(
+      recurrences.map(async (r: any) => {
+        const job = await db.job.findUnique({
+          where: {
+            jobid: r.jobId,
+          },
+        });
+        return { ...r, job: job ?? null };
+      }),
+    );
+
+    return recurrencesWithJobs
+      .filter((r: any) => r.expense.length > 0)
+      .map((r: any) => ({ ...r, expense: r.expense[0]! }));
   }),
 
   getUploadUrl: protectedProcedure

@@ -210,11 +210,7 @@ export async function deleteExpense(expenseId: string, deletedBy: number) {
     },
     include: {
       expenseParticipants: true,
-      recurrence: {
-        include: {
-          job: true,
-        },
-      },
+      recurrence: true,
     },
   });
 
@@ -342,24 +338,33 @@ export async function deleteExpense(expenseId: string, deletedBy: number) {
     }),
   );
 
-  if (expense.recurrence?.job) {
-    // Only delete the cron job if there's no other linked expense
-    const linkedExpenses = await db.expense.count({
+  if (expense && 'recurrence' in expense && expense.recurrence) {
+    // Manually fetch job data
+    const job = await db.job.findUnique({
       where: {
-        recurrenceId: expense.recurrenceId,
-        id: {
-          not: expense.id,
-        },
+        jobid: (expense.recurrence as { jobId: bigint }).jobId,
       },
     });
 
-    if (linkedExpenses === 0) {
-      operations.push(db.$executeRaw`SELECT cron.unschedule(${expense.recurrence.job.jobname})`);
-      operations.push(
-        db.expenseRecurrence.delete({
-          where: { id: expense.recurrence.id },
-        }),
-      );
+    if (job) {
+      // Only delete the cron job if there's no other linked expense
+      const linkedExpenses = await db.expense.count({
+        where: {
+          recurrenceId: (expense as any).recurrenceId,
+          id: {
+            not: expense.id,
+          },
+        },
+      });
+
+      if (linkedExpenses === 0) {
+        operations.push(db.$executeRaw`SELECT cron.unschedule(${job.jobname})`);
+        operations.push(
+          db.expenseRecurrence.delete({
+            where: { id: (expense.recurrence as { id: number }).id },
+          }),
+        );
+      }
     }
   }
 
@@ -393,11 +398,7 @@ export async function editExpense(
     where: { id: expenseId },
     include: {
       expenseParticipants: true,
-      recurrence: {
-        include: {
-          job: true,
-        },
-      },
+      recurrence: true,
     },
   });
 
@@ -622,8 +623,16 @@ export async function editExpense(
     }
   });
 
-  if (expense.recurrence?.job) {
-    operations.push(db.$executeRaw`SELECT cron.unschedule(${expense.recurrence.job.jobname})`);
+  if (expense && 'recurrence' in expense && expense.recurrence) {
+    // Manually fetch job data
+    const job = await db.job.findUnique({
+      where: {
+        jobid: (expense.recurrence as { jobId: bigint }).jobId,
+      },
+    });
+    if (job) {
+      operations.push(db.$executeRaw`SELECT cron.unschedule(${job.jobname})`);
+    }
   }
   await db.$transaction(operations);
   await updateGroupExpenseForIfBalanceIsZero(

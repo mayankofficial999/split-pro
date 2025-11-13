@@ -67,13 +67,13 @@ const ExpenseDetails: React.FC<ExpenseDetailsProps> = ({ user, expense, storageP
                 {t('ui.on')} {toUIDate(expense.createdAt, { year: true })}
               </p>
             )}
-            {expense.recurrence ? (
+            {expense.recurrence && (expense.recurrence as any).job ? (
               <p className="text-primary text-sm">
                 {t('recurrence.recurring')}
                 {i18nReady
                   ? `: 
                 
-                ${cronParser(cronFromBackend(expense.recurrence.job.schedule))}`
+                ${cronParser(cronFromBackend((expense.recurrence as any).job.schedule))}`
                   : ''}
               </p>
             ) : null}
